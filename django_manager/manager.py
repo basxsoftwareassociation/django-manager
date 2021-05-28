@@ -149,7 +149,7 @@ def get_branch(domain):
     if application_dir is None:
         return None
     return (
-        run_root(["hg", "branch"], application_dir, capture_output=True)
+        run_root(["git", "branch"], application_dir, capture_output=True)
         .stdout.decode()
         .strip()
     )
@@ -160,7 +160,9 @@ def get_repo(domain):
     if application_dir is None:
         return None
     return (
-        run_root(["hg", "path", "default"], application_dir, capture_output=True)
+        run_root(
+            ["git", "remote", "get-url", "origin"], application_dir, capture_output=True
+        )
         .stdout.decode()
         .strip()
     )
@@ -298,8 +300,8 @@ def new(context, domain, clone_url, branch, postgres, selfsigned):
     else:
         application_dir = os.path.join(APP_DIR, domain)
     run_root(["mkdir", application_dir])
-    run_root(["hg", "clone", clone_url, application_dir], application_dir)
-    run_root(["hg", "update", branch], application_dir)
+    run_root(["git", "clone", clone_url, application_dir], application_dir)
+    run_root(["git", "pull", branch], application_dir)
     run_root(["python3", "-m", "venv", ".venv"], application_dir)
     run_root(["pip", "install", "-r", "requirements.txt"], application_dir)
     local_config = [
@@ -361,7 +363,7 @@ DATABASES = {{
 @click.option("--full-pip-upgrade/--no-full-pip-upgrade", default=False)
 def update(domain, full_pip_upgrade):
     application_dir = os.path.join(APP_DIR, domain)
-    run_root(["hg", "pull", "-u"], application_dir)
+    run_root(["git", "pull"], application_dir)
     if full_pip_upgrade:
         run_root(
             [
