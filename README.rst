@@ -1,3 +1,5 @@
+NOT PRODUCTION READY, USE ON YOUR OWN RISK!
+
 Django Manager
 ==============
 
@@ -6,13 +8,13 @@ The tool requires the following deployment:
 
 - nginx as webserver
 - uwsgi as application gateway
-- sqlite database (TODO: make this postgres)
-- python 3.6 or higher
+- sqlite database (optional TODO: allow postgres)
+- python 3.7 or higher
 
 Install
 -------
 
-    pip install django-manager
+    pip install git+https://github.com/basxsoftwareassociation/django-manager/
 
 Use
 ---
