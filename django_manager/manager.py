@@ -148,11 +148,14 @@ def get_branch(domain):
     application_dir = os.path.join(APP_DIR, domain)
     if application_dir is None:
         return None
-    return (
-        run_root(["git", "branch"], application_dir, capture_output=True)
-        .stdout.decode()
-        .strip()
-    )
+    try:
+        return (
+            run_root(["git", "branch"], application_dir, capture_output=True)
+            .stdout.decode()
+            .strip()
+        )
+    except subprocess.CalledProcessError:
+        return None
 
 
 def get_repo(domain):
