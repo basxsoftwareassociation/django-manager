@@ -283,7 +283,7 @@ def ls(raw):
 @click.command()
 @click.argument("domain", type=DomainParamType())
 @click.argument("clone_url")
-@click.option("--branch", default="default")
+@click.option("--branch", default="main")
 @click.option("--postgres/--no-postgres", default=False)
 @click.option("--selfsigned/--no-selfsigned", default=False)
 @click.pass_context
