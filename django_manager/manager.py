@@ -304,7 +304,7 @@ def new(context, domain, clone_url, branch, postgres, selfsigned):
         application_dir = os.path.join(APP_DIR, domain)
     run_root(["mkdir", application_dir])
     run_root(["git", "clone", clone_url, application_dir], application_dir)
-    run_root(["git", "pull", branch], application_dir)
+    run_root(["git", "checkout", branch], application_dir)
     run_root(["python3", "-m", "venv", ".venv"], application_dir)
     run_root(["pip", "install", "-r", "requirements.txt"], application_dir)
     local_config = [
