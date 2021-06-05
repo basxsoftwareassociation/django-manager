@@ -233,7 +233,7 @@ def setupwebserver(domain, selfsigned=False):
         ssl_certificate /etc/ssl/certs/{domain}.crt;
         ssl_certificate_key /etc/ssl/private/{domain}.key;
     """
-    nginx_config += """}}"""
+    nginx_config += """}"""
     nginx_site = os.path.join(NGINX_SITES_DIR, domain)
     nginx_en_site = os.path.join(NGINX_ENABLED_SITES_DIR, domain)
     uwsgi_file = os.path.join(UWSGI_CONF_DIR, f"{domain}.ini")
