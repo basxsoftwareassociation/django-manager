@@ -382,7 +382,7 @@ def update(domain, full_pip_upgrade):
         )
     else:
         run_root(
-            ["pip", "install", "-r", "requirements.txt", "--upgrade"], application_dir
+            ["pip", "install", "--upgrade", "-r", "requirements.txt"], application_dir
         )
 
     run_root(["rm", "-rf", "static"], application_dir)
