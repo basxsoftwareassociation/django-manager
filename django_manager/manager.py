@@ -372,11 +372,10 @@ def update(domain, full_pip_upgrade):
             [
                 "pip",
                 "install",
+                "--upgrade",
+                "--force-reinstall",
                 "-r",
                 "requirements.txt",
-                "--upgrade",
-                "--upgrade-strategy",
-                "eager",
             ],
             application_dir,
         )
