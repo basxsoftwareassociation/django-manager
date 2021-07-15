@@ -397,9 +397,6 @@ def update(domain, full_pip_upgrade):
     djangomanage(["collectstatic", "--no-input"], domain)
     djangomanage(["compress"], domain, check=False)
     djangomanage(["check"], domain)
-    djangomanage(
-        ["deploy"], domain, check=False
-    )  # custom command from the bread package
     run_root(["touch", os.path.join(UWSGI_CONF_DIR, f"{domain}.ini")], check=False)
 
 
