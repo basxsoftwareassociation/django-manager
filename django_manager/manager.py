@@ -381,13 +381,18 @@ def update(domain, full_pip_upgrade):
         )
     else:
         run_root(
-            ["pip", "install", "--upgrade", "-r", "requirements.txt"], application_dir
+            [
+                "pip",
+                "install",
+                "--upgrade",
+                "--force-reinstall",
+                "-r",
+                "requirements.txt",
+            ],
+            application_dir,
         )
 
-    run_root(["rm", "-rf", "static"], application_dir)
     djangomanage(["migrate", "--noinput"], domain)
-    djangomanage(["update_translation_fields"], domain, check=False)
-    djangomanage(["thumbnail", "cleanup"], domain, check=False)
     djangomanage(
         ["compilemessages", "-l", "en", "-l", "th", "-l", "de"],
         domain,
