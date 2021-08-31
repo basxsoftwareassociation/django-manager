@@ -353,8 +353,6 @@ DATABASES = {{
     pw = randomstring()
     createsucmd = f'\'from django.contrib.auth.models import User; User.objects.create_superuser("admin", "", "{pw}")\''
     djangomanage(["shell", "-c", createsucmd], domain)
-    update_site_domain = f'\'from django.contrib.sites.models import Site; Site.objects.filter(id=1).update(domain="{domain}", name="{domain}")\''
-    djangomanage(["shell", "-c", update_site_domain], domain)
     # webserver needs to be setup before update
     setupwebserver(domain, selfsigned)
     context.invoke(update, domain=domain)
@@ -476,9 +474,6 @@ def cp(context, srcdomain, dstdomain):
             ],
             user=DJANGO_USER,
         )
-
-    update_site_domain = f"'from django.contrib.sites.models import Site; Site.objects.filter(id=1).update(domain=\"{dstdomain}\")'"
-    djangomanage(["shell", "-c", update_site_domain], dstdomain)
 
     # copy media files
     run_root(["rm", "-rf", "media"], application_dir2)
