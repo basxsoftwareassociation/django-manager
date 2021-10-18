@@ -286,8 +286,9 @@ def ls(raw):
 @click.option("--branch", default="main")
 @click.option("--postgres/--no-postgres", default=False)
 @click.option("--selfsigned/--no-selfsigned", default=False)
+@click.option("--localsettings", default="")
 @click.pass_context
-def new(context, domain, clone_url, branch, postgres, selfsigned):
+def new(context, domain, clone_url, branch, postgres, selfsigned, localsettings):
     application_dir = get_application_dir(domain)
     if application_dir is not None:
         print(f"'{application_dir}'exists already")
@@ -335,6 +336,9 @@ DATABASES = {{
     }}
 }}"""
         )
+    if localsettings:
+        with open(localsettings, "r") as f:
+            local_config.extend(f.readlines())
 
     local_settings = os.path.join(application_dir, projectname, "settings", "local.py")
     run_root(["dd", "of=" + local_settings], input="\n".join(local_config).encode())
@@ -371,7 +375,6 @@ def update(domain, full_pip_upgrade):
                 "pip",
                 "install",
                 "--upgrade",
-                "--force-reinstall",
                 "-r",
                 "requirements.txt",
             ],
@@ -383,7 +386,6 @@ def update(domain, full_pip_upgrade):
                 "pip",
                 "install",
                 "--upgrade",
-                "--force-reinstall",
                 "-r",
                 "requirements.txt",
             ],
