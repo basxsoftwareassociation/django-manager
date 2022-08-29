@@ -355,7 +355,10 @@ DATABASES = {{
     run_root(["chmod", "a-rwx", "media"], application_dir)
     run_root(["chmod", "u+rwx", "media"], application_dir)
     pw = randomstring()
-    createsucmd = f'\'from django.contrib.auth.models import User; User.objects.create_superuser("admin", "", "{pw}")\''
+    createsucmd = (
+        "'from django.contrib.auth.models import User;"
+        f' User.objects.create_superuser("admin", "", "{pw}")\''
+    )
     djangomanage(["shell", "-c", createsucmd], domain)
     # webserver needs to be setup before update
     setupwebserver(domain, selfsigned)
@@ -400,7 +403,6 @@ def update(domain, full_pip_upgrade):
         check=False,
     )
     djangomanage(["collectstatic", "--no-input"], domain)
-    djangomanage(["compress"], domain, check=False)
     djangomanage(["check"], domain)
     run_root(["touch", os.path.join(UWSGI_CONF_DIR, f"{domain}.ini")], check=False)
 
