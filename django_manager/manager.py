@@ -336,6 +336,7 @@ DATABASES = {{
     }}
 }}"""
         )
+    local_config.append(f'CELERY_BROKER_URL = "amqp://localhost/{domain}"')
     if localsettings:
         with open(localsettings, "r") as f:
             local_config.extend(f.readlines())
@@ -360,8 +361,26 @@ DATABASES = {{
         f' User.objects.create_superuser("admin", "", "{pw}")\''
     )
     djangomanage(["shell", "-c", createsucmd], domain)
+
+    # set up rabbitmq
+    run_root(
+        [
+            "rabbitmqctl",
+            "set_permissions",
+            "-p",
+            domain,
+            "guest",
+            '".*"',
+            '".*"',
+            '".*"',
+        ],
+        check=False,
+    )
+    run_root(["rabbitmqctl", "add_vhost", domain], check=False)
+
     # webserver needs to be setup before update
     setupwebserver(domain, selfsigned)
+
     context.invoke(update, domain=domain)
     print(f"django admin-password: {pw}")
 
