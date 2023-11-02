@@ -358,6 +358,8 @@ def new(context, domain, clone_url, branch, selfsigned, localsettings):
         application_dir = os.path.join(APP_DIR, domain)
     run_root(["mkdir", application_dir])
     vcs_clone(domain, clone_url)
+    if branch == "main" and is_hg(domain):
+        branch = "default"
     vcs_select_branch(domain, branch)
     run_root(["python3", "-m", "venv", ".venv"], application_dir)
     run_root(["pip", "install", "-r", "requirements.txt"], application_dir)
