@@ -144,16 +144,83 @@ def get_projectname(domain):
     return projectname
 
 
-def get_branch(domain):
+def is_git(domain):
     application_dir = os.path.join(APP_DIR, domain)
-    if application_dir is None:
+    return os.path.isdir(os.path.join(application_dir, ".git"))
+
+
+def is_hg(domain):
+    application_dir = os.path.join(APP_DIR, domain)
+    return os.path.isdir(os.path.join(application_dir, ".hg"))
+
+
+def vcs_remote_url(domain):
+    application_dir = os.path.join(APP_DIR, domain)
+    if is_git(domain):
+        run_root(
+            ["git", "remote", "get-url", "origin"],
+            application_dir,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+    elif is_hg(domain):
+        run_root(
+            ["hg", "paths", "default"], application_dir, capture_output=True, text=True
+        ).stdout.strip()
+    else:
+        raise Exception(f"Domain {domain} uses neither git nor hg")
+
+
+def vcs_branch(domain):
+    application_dir = os.path.join(APP_DIR, domain)
+    if is_git(domain):
+        run_root(
+            ["git", "branch"], application_dir, capture_output=True, text=True
+        ).stdout.strip()
+    elif is_hg(domain):
+        run_root(
+            ["hg", "branch"], application_dir, capture_output=True, text=True
+        ).stdout.strip()
+    else:
+        raise Exception(f"Domain {domain} uses neither git nor hg")
+
+
+def vcs_pull(domain):
+    application_dir = os.path.join(APP_DIR, domain)
+    if is_git(domain):
+        run_root(["git", "pull"], application_dir)
+    elif is_hg(domain):
+        run_root(["hg", "pull", "-u"], application_dir)
+    else:
+        raise Exception(f"Domain {domain} uses neither git nor hg")
+
+
+def vcs_clone(domain, clone_url):
+    application_dir = os.path.join(APP_DIR, domain)
+
+    if clone_url.startswith("ssh://git") or clone_url.startswith("https://git"):
+        run_root(["git", "clone", clone_url, application_dir], application_dir)
+    elif clone_url.startswith("ssh://hg") or clone_url.startswith("https://hg"):
+        run_root(["hg", "clone", clone_url, application_dir], application_dir)
+    else:
+        raise Exception(f"Not sure whether {clone_url} uses git or hg")
+
+
+def vcs_select_branch(domain, branch):
+    application_dir = os.path.join(APP_DIR, domain)
+    if is_git(domain):
+        run_root(["git", "checkout", branch], application_dir)
+    elif is_hg(domain):
+        run_root(["hg", "update", branch], application_dir)
+    else:
+        raise Exception(f"Domain {domain} uses neither git nor hg")
+
+
+def get_branch(domain):
+    if get_application_dir(domain) is None:
         return ""
     try:
-        return (
-            run_root(["git", "branch"], application_dir, capture_output=True)
-            .stdout.decode()
-            .strip()
-        )
+        return vcs_branch(domain)
     except subprocess.CalledProcessError:
         return ""
 
@@ -162,13 +229,7 @@ def get_repo(domain):
     application_dir = get_application_dir(domain)
     if application_dir is None:
         return None
-    return (
-        run_root(
-            ["git", "remote", "get-url", "origin"], application_dir, capture_output=True
-        )
-        .stdout.decode()
-        .strip()
-    )
+    return vcs_remote_url(domain)
 
 
 def get_application_dir(domain):
@@ -214,13 +275,6 @@ def get_db_config(domain):
     if c and "DATABASES" in c and "default" in c["DATABASES"]:
         return c["DATABASES"]["default"]
     return None
-
-
-def uses_postgres(domain):
-    c = get_db_config(domain)
-    if c is None:
-        return False
-    return c["ENGINE"] == "django.db.backends.postgresql"
 
 
 def setupwebserver(domain, selfsigned=False):
@@ -284,11 +338,10 @@ def ls(raw):
 @click.argument("domain", type=DomainParamType())
 @click.argument("clone_url")
 @click.option("--branch", default="main")
-@click.option("--postgres/--no-postgres", default=False)
 @click.option("--selfsigned/--no-selfsigned", default=False)
 @click.option("--localsettings", default="")
 @click.pass_context
-def new(context, domain, clone_url, branch, postgres, selfsigned, localsettings):
+def new(context, domain, clone_url, branch, selfsigned, localsettings):
     application_dir = get_application_dir(domain)
     if application_dir is not None:
         print(f"'{application_dir}'exists already")
@@ -304,8 +357,8 @@ def new(context, domain, clone_url, branch, postgres, selfsigned, localsettings)
     else:
         application_dir = os.path.join(APP_DIR, domain)
     run_root(["mkdir", application_dir])
-    run_root(["git", "clone", clone_url, application_dir], application_dir)
-    run_root(["git", "checkout", branch], application_dir)
+    vcs_clone(domain, clone_url)
+    vcs_select_branch(domain, branch)
     run_root(["python3", "-m", "venv", ".venv"], application_dir)
     run_root(["pip", "install", "-r", "requirements.txt"], application_dir)
     local_config = [
@@ -317,25 +370,6 @@ def new(context, domain, clone_url, branch, postgres, selfsigned, localsettings)
         "",
     ]
     projectname = get_projectname(domain)
-    if postgres:
-        db_name = f"{safedomainstr(domain)}_db"
-        db_user = f"{safedomainstr(domain)}_user"
-        db_pw = randomstring()
-        db_creation = f"""CREATE DATABASE {db_name};
-CREATE USER {db_user} WITH LOGIN ENCRYPTED PASSWORD '{db_pw}';
-GRANT ALL PRIVILEGES ON DATABASE {db_name} TO {db_user};"""
-        run_root(["psql"], application_dir, user="postgres", input=db_creation.encode())
-        local_config.append(
-            f"""
-DATABASES = {{
-    'default': {{
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': '{db_name}',
-        'USER': '{db_user}',
-        'PASSWORD': '{db_pw}',
-    }}
-}}"""
-        )
     local_config.append(f'CELERY_BROKER_URL = "amqp://localhost/{domain}"')
     if localsettings:
         with open(localsettings, "r") as f:
@@ -348,9 +382,8 @@ DATABASES = {{
     run_root(["chmod", "u+rw", local_settings], application_dir)
     run_root(["chown", f"{DJANGO_USER}:{DJANGO_USER}", "."], application_dir)
     djangomanage(["migrate", "--noinput"], domain)
-    if not postgres:
-        run_root(["chmod", "a-rwx", "db.sqlite3"], application_dir)
-        run_root(["chmod", "u+rw", "db.sqlite3"], application_dir)
+    run_root(["chmod", "a-rwx", "db.sqlite3"], application_dir)
+    run_root(["chmod", "u+rw", "db.sqlite3"], application_dir)
     run_root(["mkdir", "-p", "media"], application_dir)
     run_root(["chown", f"{DJANGO_USER}:{DJANGO_USER}", "-R", "media"], application_dir)
     run_root(["chmod", "a-rwx", "media"], application_dir)
@@ -363,6 +396,7 @@ DATABASES = {{
     djangomanage(["shell", "-c", createsucmd], domain)
 
     # set up rabbitmq
+    run_root(["rabbitmqctl", "add_vhost", domain], check=False)
     run_root(
         [
             "rabbitmqctl",
@@ -376,7 +410,6 @@ DATABASES = {{
         ],
         check=False,
     )
-    run_root(["rabbitmqctl", "add_vhost", domain], check=False)
 
     # webserver needs to be setup before update
     setupwebserver(domain, selfsigned)
@@ -390,7 +423,7 @@ DATABASES = {{
 @click.option("--full-pip-upgrade/--no-full-pip-upgrade", default=False)
 def update(domain, full_pip_upgrade):
     application_dir = os.path.join(APP_DIR, domain)
-    run_root(["git", "pull"], application_dir)
+    vcs_pull(domain)
     if full_pip_upgrade:
         run_root(
             [
@@ -453,7 +486,6 @@ def cp(context, srcdomain, dstdomain):
                 domain=dstdomain,
                 clone_url=get_repo(srcdomain),
                 branch=get_branch(srcdomain),
-                postgres=uses_postgres(srcdomain),
             )
         projectname2 = get_projectname(dstdomain)
     if projectname1 != projectname2:
@@ -461,42 +493,14 @@ def cp(context, srcdomain, dstdomain):
         return
 
     # copy database
-    if uses_postgres(srcdomain):
-        dbconfig1 = get_db_config(srcdomain)
-        dbconfig2 = get_db_config(dstdomain)
-        tmpfile = os.path.join(
-            tempfile.gettempdir(), f"db_migration_{randomstring(6)}.sql"
-        )
-        try:
-            run_root(
-                [
-                    "pg_dump",
-                    "--clean",
-                    "--if-exists",
-                    "--no-owner",
-                    "--file",
-                    tmpfile,
-                    dbconfig1["NAME"],
-                ],
-                user="postgres",
-            )
-            run_root(
-                ["psql", "--file", tmpfile, dbconfig2["NAME"]],
-                env={"PGPASSWORD": dbconfig2["PASSWORD"], "PGUSER": dbconfig2["USER"]},
-                user="postgres",
-            )
-        finally:
-            pass
-            # run_root(["rm", "-f", tmpfile])
-    else:
-        run_root(
-            [
-                "cp",
-                os.path.join(application_dir1, "db.sqlite3"),
-                os.path.join(application_dir2, "db.sqlite3"),
-            ],
-            user=DJANGO_USER,
-        )
+    run_root(
+        [
+            "cp",
+            os.path.join(application_dir1, "db.sqlite3"),
+            os.path.join(application_dir2, "db.sqlite3"),
+        ],
+        user=DJANGO_USER,
+    )
 
     # copy media files
     run_root(["rm", "-rf", "media"], application_dir2)
@@ -540,11 +544,6 @@ def mv(context, srcdomain, dstdomain):
 @click.argument("domain", type=DomainParamType())
 def rm(domain):
     application_dir = os.path.join(APP_DIR, domain)
-    if uses_postgres(domain):
-        c = get_db_config(domain)
-        db_removal = f"""DROP DATABASE {c["NAME"]};
-DROP USER {c["USER"]};"""
-        run_root(["psql"], application_dir, user="postgres", input=db_removal.encode())
     run_root(["rm", "-rf", application_dir])
     run_root(["rm", "-f", os.path.join(UWSGI_CONF_DIR, f"{domain}.ini")])
     run_root(["rm", "-f", os.path.join(NGINX_SITES_DIR, domain)])
