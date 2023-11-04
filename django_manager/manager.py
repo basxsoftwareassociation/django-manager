@@ -30,12 +30,12 @@ def safedomainstr(domain):
 
 # table is row-first 2d array
 def print_tabel(table):
-    maxwidths = [max([len(str(cell)) for cell in column]) for column in zip(*table)]
+    maxwidths = [max([len((cell or "")) for cell in column]) for column in zip(*table)]
     totalwidth = sum(maxwidths) + len(maxwidths) * 3 + 1
     print("+" + (totalwidth - 2) * "-" + "+")
     for row in table:
         for i, cell in enumerate(row):
-            cell += (maxwidths[i] - len(cell)) * " "
+            cell += (maxwidths[i] - len(cell or "")) * " "
             print(f"| {cell} ", end="")
         print("|")
         print("+" + (totalwidth - 2) * "-" + "+")
