@@ -35,7 +35,8 @@ def print_tabel(table):
     print("+" + (totalwidth - 2) * "-" + "+")
     for row in table:
         for i, cell in enumerate(row):
-            cell += (maxwidths[i] - len(cell or "")) * " "
+            cell = cell or ""
+            cell += (maxwidths[i] - len(cell)) * " "
             print(f"| {cell} ", end="")
         print("|")
         print("+" + (totalwidth - 2) * "-" + "+")
