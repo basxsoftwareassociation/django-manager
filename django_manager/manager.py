@@ -314,7 +314,17 @@ def setupwebserver(domain, selfsigned=False):
         run_root(["systemctl", "restart", "nginx"])
     else:
         run_root(
-            ["certbot", "--non-interactive", "--no-redirect", "--nginx", "-d", domain]
+            [
+                "certbot",
+                "--agree-tos",
+                "--email",
+                "info@basx.dev",
+                "--non-interactive",
+                "--no-redirect",
+                "--nginx",
+                "-d",
+                domain,
+            ]
         )
 
 
@@ -555,7 +565,16 @@ def rm(domain):
     run_root(["systemctl", "restart", "nginx"])
     if click.confirm("Should the certificate be removed as well (if existing)?"):
         run_root(
-            ["certbot", "revoke", "--delete-after-revoke", "--cert-name", domain],
+            [
+                "certbot",
+                "--agree-tos",
+                "--email",
+                "info@basx.dev",
+                "revoke",
+                "--delete-after-revoke",
+                "--cert-name",
+                domain,
+            ],
             check=False,
         )
         run_root(
